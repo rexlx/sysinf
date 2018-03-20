@@ -1,7 +1,15 @@
+from __future__ import print_function
 import multiprocessing as mp
 import sys
 import socket
 import os
+
+def get_model():
+    mdl = os.popen('sudo dmidecode | grep "Product Name"')
+    model = mdl.readline().split(': ')
+    product = model[1]
+    #return product
+    print('Model'.ljust(14) + product, end='')
 
 def seconds_to_readable(seconds):
     """
@@ -17,17 +25,22 @@ def seconds_to_readable(seconds):
     mins = 0
 
     # this loop tests the input and breaks
-    # it into years, months, weeks, days,
-    # hours, and seconds
-    while True:
+    # it into days, hours, and seconds
+    while s >= 0:
+        # if the value is negative
         if s < 0:
+            # inform user of error
             print("thats less then zero...")
             error = 'true'
             break
+        # if the value is greater or equal to a day in seconds
         elif s >= 86400:
+            # subtract a day from the value and increase the day count by one
             s -= 86400
             day += 1
+            # repeat from the top
             continue
+        # if the value
         elif s >= 3600:
             s -= 3600
             hour += 1
@@ -40,7 +53,6 @@ def seconds_to_readable(seconds):
             break
     converted_time = str(day) + 'd ' + str(hour) + 'h ' \
                    + str(mins) + 'm ' + str(s) + 's'
-    #print(socket.gethostname().ljust(36) + ' ' + converted_time)
     return converted_time
 
 def get_uptime():
@@ -109,23 +121,13 @@ def get_net():
 
 def get_kernel():
     f = os.popen('uname -r')
-    kernel = f.readline().strip()
+    kernel = f.readline()
     print('Kernel'.ljust(14) + kernel)
 
-
-def get_os():
-    if os.path.isfile('/etc/os-release'):
-        f = open('/etc/os-release')
-        for line in f:
-            if "PRETTY_NAME" in line:
-                osys = line.strip().split('"')
-                distro = osys[1]
-    print('OS'.ljust(14) + distro)
-
 print('\n')
+get_model()
 get_uptime()
 get_cpu()
 get_mem()
 get_net()
 get_kernel()
-get_os()
