@@ -40,46 +40,64 @@ def seconds_to_readable(seconds):
             day += 1
             # repeat from the top
             continue
-        # if the value
+        # if the value is greater or equal to an hour in seconds
         elif s >= 3600:
+            # subtract an hour from the value and increase the hour count by one
             s -= 3600
             hour += 1
             continue
+        # subtracts minutes and increases the minute counter
         elif s >= 60:
             s -= 60
             mins += 1
             continue
+        # otherwise, the value had been reduced to its final form
         elif s < 60:
+            #stop evaluating the value now
             break
+    # join the the counters from above and return them
     converted_time = str(day) + 'd ' + str(hour) + 'h ' \
                    + str(mins) + 'm ' + str(s) + 's'
     return converted_time
 
 def get_uptime():
+    # open (and close) the uptime file
     with open('/proc/uptime', 'r') as f:
         for i in f:
+            # splits the line for just the runtime
             line = str(i).split()
             uptime = line[0]
-
+    # converts that data into human readable times
     runtime = seconds_to_readable(uptime)
     print('Runtime'.ljust(14) + runtime)
 
 def get_cpu():
+    # open and close the cpu file
     with open('/proc/cpuinfo') as f:
+        #using the multiprocessing module, count cores
         total_cores = mp.cpu_count()
+        # empty lists to append later
         sock_count = []
         core_count = []
+        # for each line in the cpu file
         for line in f:
+            # if (physical id) is in the line
             if 'cal id' in line:
+                # append the socket list
                 sock_count.append(line)
             if 'model name' in line:
+                # split the line for the stuff we need
                 mod = line.split()
                 model = mod[3:]
+                # join into a single string
                 cpu_model = ' '.join(str(e) for e in model)
             if 'cpu cores' in line:
                 cores = line.split()
                 core_count.append(cores[3])
+    # convert this list into a set to leave only unique values
     sockets = set(sock_count)
+    # use the last value in the list and multiply it
+    # by the amount of sockets giving you the total real cpus
     real_cores = int(core_count[-1]) * int(len(sockets))
     print('CPU Model'.ljust(14) + cpu_model)
     print('Sockets'.ljust(14) + str(len(sockets)))
@@ -87,18 +105,25 @@ def get_cpu():
     print('Total Cores'.ljust(14) + str(total_cores))
 
 def get_mem():
+    # open and close meminfo (meminfo values print as kB but are KB
+    # aka KiB
     with open('/proc/meminfo') as f:
         for line in f:
             if 'MemTotal' in line:
                 total = line.split()
                 mem_in_kb = total[1]
+                # convert KB to GB
                 kb_to_gb = int(mem_in_kb) / (1024 ** 2.0)
+                # get rid of some zeroes
                 mem_in_gb = "{0:.2f}".format(kb_to_gb)
+    # dazzle
     print('Total Memory'.ljust(14) + mem_in_kb + ' (' + str(mem_in_gb) \
           + 'gb)')
 
 def get_net():
+    # get hostname
     hostname = socket.gethostname()
+    # this tests where ip is, since CentOS versions cant agree :)
     if os.path.isfile('/usr/sbin/ip'):
         f = os.popen('/usr/sbin/ip route')
         is_linux_with_ip = True
@@ -106,13 +131,16 @@ def get_net():
         f = os.popen('/sbin/ip route')
         is_linux_with_ip = True
     else:
+        # otherwise the ip command is not installed
         print("Missing 'ip' package")
         is_linux_with_ip = False
     if is_linux_with_ip:
         for line in f:
+            #get basic net info
             if 'default' in line:
                 data = line.split()
                 gateway, dev = data[2], data[4]
+    # get ip address
     ip = socket.gethostbyname(hostname)
     print('IP'.ljust(14) + ip)
     print('Gateway'.ljust(14) + gateway)
