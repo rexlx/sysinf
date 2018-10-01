@@ -1,8 +1,6 @@
 from __future__ import print_function
 import multiprocessing as mp
-import sys
-import socket
-import os
+import sys, os, socket
 
 """
 EXAMPLE OUTPUT:
@@ -22,6 +20,9 @@ Kernel        4.15.9-200.fc26.x86_64
 """
 
 def get_model():
+    """
+    this function requires root for dmidecode
+    """
     mdl = os.popen('sudo dmidecode | grep "Product Name"')
     model = mdl.readline().split(': ')
     product = model[1]
@@ -48,7 +49,6 @@ def seconds_to_readable(seconds):
         if s < 0:
             # inform user of error
             print("thats less then zero...")
-            error = 'true'
             break
         # if the value is greater or equal to a day in seconds
         elif s >= 86400:
@@ -169,10 +169,14 @@ def get_kernel():
     kernel = f.readline()
     print('Kernel'.ljust(14) + kernel)
 
-print('\n')
-get_model()
-get_uptime()
-get_cpu()
-get_mem()
-get_net()
-get_kernel()
+def main():
+    #get model off by default
+    #get_model()
+    get_uptime()
+    get_cpu()
+    get_mem()
+    get_net()
+    get_kernel()
+
+if __name__ == '__main__':
+    main()
