@@ -2,6 +2,7 @@ from __future__ import print_function
 import multiprocessing as mp
 import os, platform, sys, socket
 
+
 def get_args():
     """
     gets arguments
@@ -11,16 +12,18 @@ def get_args():
         if sys.argv[1] == '-v':
             # they want the model. needs root priv
             verbose = True
-        return verbose 
+        return verbose
     else:
         verbose = False
         return verbose
 
+
 def get_dist():
     # this will not work on windows, assume linux
     dist = platform.platform()
-    #x = ' '.join(e for e in dist)
+    # #x = ' '.join(e for e in dist)
     print("Distribution".ljust(14) + dist)
+
 
 def get_model():
     """
@@ -33,29 +36,29 @@ def get_model():
         mdl = os.popen('dmidecode | grep "Product Name"')
         model = mdl.readline().split(': ')
         product = model[1]
-        #return product
+        # #return product
         print('Model'.ljust(14) + product, end='')
     # exception should be premission denied, it is
     # possible perhaps ddmidecode command isnt
     # installed as well.
     except Exception as e:
-        print("couldn't get_model(), you need higher permissions\n")
+        print("couldn't get_model(), you need higher permissions", e)
+
 
 def seconds_to_readable(seconds):
     """
     this function converts seconds to human readable times
     im sure theres a better way, but it works.
     """
-    #Copies the number
+    # copies the number
     s = int(float(seconds))
 
-    #Sets default values
+    # sets default values
     day = 0
     hour = 0
     mins = 0
 
-    # this loop tests the input and breaks
-    # it into days, hours, and seconds
+    # this loop tests the input and breaks it into days, hours, and seconds
     while s >= 0:
         # if the value is negative
         if s < 0:
@@ -82,8 +85,9 @@ def seconds_to_readable(seconds):
         elif s < 60:
             break
     converted_time = str(day) + 'd ' + str(hour) + 'h ' \
-                   + str(mins) + 'm ' + str(s) + 's'
+                     + str(mins) + 'm ' + str(s) + 's'
     return converted_time
+
 
 def get_uptime():
     """
@@ -98,6 +102,7 @@ def get_uptime():
     # converted here
     runtime = seconds_to_readable(uptime)
     print('Runtime'.ljust(14) + runtime)
+
 
 def get_cpu():
     """
@@ -134,6 +139,7 @@ def get_cpu():
     print('Real Cores'.ljust(14) + str(real_cores))
     print('Total Cores'.ljust(14) + str(total_cores))
 
+
 def get_mem():
     """
     opens meminfo, gets meminfo
@@ -148,8 +154,9 @@ def get_mem():
                 kb_to_gb = int(mem_in_kb) / (1024 ** 2.0)
                 # we dont need many decimals, two will do
                 mem_in_gb = "{0:.2f}".format(kb_to_gb)
-    print('Total Memory'.ljust(14) + mem_in_kb + ' (' + str(mem_in_gb) \
+    print('Total Memory'.ljust(14) + mem_in_kb + ' (' + str(mem_in_gb)
           + 'gb)')
+
 
 def get_net():
     """
@@ -182,6 +189,7 @@ def get_net():
     print('Interface'.ljust(14) + dev)
     print('Hostname'.ljust(14) + hostname)
 
+
 # deprecated since platform deprecated the distro feature
 # will keep for now
 def get_kernel():
@@ -191,6 +199,7 @@ def get_kernel():
     f = os.popen('uname -r')
     kernel = f.readline()
     print('Kernel'.ljust(14) + kernel)
+
 
 def main():
     """
@@ -203,13 +212,14 @@ def main():
         get_model()
     # leaving this commented in case someone
     # wants it on by defualt
-    #get_model()
+    # #get_model()
     get_dist()
     get_uptime()
     get_cpu()
     get_mem()
     get_net()
-    #get_kernel()
+    # #get_kernel()
+
 
 if __name__ == '__main__':
     main()
