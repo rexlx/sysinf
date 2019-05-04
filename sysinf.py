@@ -1,6 +1,12 @@
 from __future__ import print_function
 import multiprocessing as mp
+import datetime as dt
 import os, platform, sys, socket
+try:
+    import netifaces as ip
+    netifaces = True
+except ImportError:
+    netifaces = False
 
 
 def get_args():
@@ -22,7 +28,7 @@ def get_dist():
     # this will not work on windows, assume linux
     dist = platform.platform()
     # #x = ' '.join(e for e in dist)
-    print("Distribution".ljust(14) + dist)
+    print("Distribution".ljust(16) + dist)
 
 
 def get_model():
@@ -37,56 +43,13 @@ def get_model():
         model = mdl.readline().split(': ')
         product = model[1]
         # #return product
-        print('Model'.ljust(14) + product, end='')
+        print('[model]')
+        print('Model'.ljust(16) + product, end='')
     # exception should be premission denied, it is
     # possible perhaps ddmidecode command isnt
     # installed as well.
     except Exception as e:
         print("couldn't get_model(), you need higher permissions", e)
-
-
-def seconds_to_readable(seconds):
-    """
-    this function converts seconds to human readable times
-    im sure theres a better way, but it works.
-    """
-    # copies the number
-    s = int(float(seconds))
-
-    # sets default values
-    day = 0
-    hour = 0
-    mins = 0
-
-    # this loop tests the input and breaks it into days, hours, and seconds
-    while s >= 0:
-        # if the value is negative
-        if s < 0:
-            # inform user of error
-            print("thats less then zero...")
-            error = 'true'
-            break
-        # if the value is greater or equal to a day in seconds
-        elif s >= 86400:
-            # subtract a day from the value and increase the day count by one
-            s -= 86400
-            day += 1
-            # repeat from the top
-            continue
-        # if the value
-        elif s >= 3600:
-            s -= 3600
-            hour += 1
-            continue
-        elif s >= 60:
-            s -= 60
-            mins += 1
-            continue
-        elif s < 60:
-            break
-    converted_time = str(day) + 'd ' + str(hour) + 'h ' \
-                     + str(mins) + 'm ' + str(s) + 's'
-    return converted_time
 
 
 def get_uptime():
@@ -98,10 +61,10 @@ def get_uptime():
     with open('/proc/uptime', 'r') as f:
         for i in f:
             line = str(i).split()
-            uptime = line[0]
+            uptime = int(float(line[0]))
     # converted here
-    runtime = seconds_to_readable(uptime)
-    print('Runtime'.ljust(14) + runtime)
+    runtime = "{:0>8}".format(str(dt.timedelta(seconds=uptime)))
+    print('Runtime'.ljust(16) + runtime)
 
 
 def get_cpu():
@@ -134,10 +97,11 @@ def get_cpu():
     # the amount of total real cores is the real core count
     # multiplied by the amount of sockets (cpus) on board
     real_cores = int(core_count[-1]) * int(len(sockets))
-    print('CPU Model'.ljust(14) + cpu_model)
-    print('Sockets'.ljust(14) + str(len(sockets)))
-    print('Real Cores'.ljust(14) + str(real_cores))
-    print('Total Cores'.ljust(14) + str(total_cores))
+    print('\n[cpu]')
+    print('CPU Model'.ljust(16) + cpu_model)
+    print('Sockets'.ljust(16) + str(len(sockets)))
+    print('Real Cores'.ljust(16) + str(real_cores))
+    print('Total Cores'.ljust(16) + str(total_cores))
 
 
 def get_mem():
@@ -154,13 +118,53 @@ def get_mem():
                 kb_to_gb = int(mem_in_kb) / (1024 ** 2.0)
                 # we dont need many decimals, two will do
                 mem_in_gb = "{0:.2f}".format(kb_to_gb)
-    print('Total Memory'.ljust(14) + mem_in_kb + ' (' + str(mem_in_gb)
+    print('\n[memory]')
+    print('Total Memory'.ljust(16) + mem_in_kb + ' (' + str(mem_in_gb)
           + 'gb)')
 
 
 def get_net():
     """
-    get details about network state
+    this is the preferred method of getting the network info. it
+    leverages the netifaces module instead of opening a subprocess to
+    run the linux ip command. netifaces is usually in the std library,
+    but if it isnt, we will use another function
+    """
+    # ip is an alias for the netifaces module
+    # create a list network devices
+    devs = ip.interfaces()
+    # and a list of gateways
+    gws = ip.gateways()
+    # get the default gw and iface
+    dfaultgw = gws['default'][2][0]
+    dfaultiface = gws['default'][2][1]
+    # initialize an empty dictionary
+    ipaddrs = {}
+    # for item in the network devices list
+    for i in devs:
+        # get their address info
+        all_addrs = ip.ifaddresses(i)
+        # 2 is the default dictionary key in netifaces for 'AF_INET'
+        # which is the address we're interested in
+        if 2 in all_addrs:
+            # append the ipaddrs dict with the device name as the key
+            # and the address as the value. the ifaddresses from
+            # netifaces returns the data in nested dictionaries, we
+            # specify the key '2', the list index, 0, then the addr key
+            ipaddrs[i] = all_addrs[2][0]['addr']
+    # print out the data, unless it's loopback
+    print('\n[network]')
+    print("Gateway".ljust(16) + dfaultgw + " (via " + dfaultiface + ")")
+    # pad = max(len(e) for e in ipaddrs.keys()) + 1
+    for dev, addr in ipaddrs.items():
+        if addr != '127.0.0.1':
+            print(dev.ljust(16) + addr)
+
+
+def get_net_from_ip():
+    """
+    get details about network state via the linux ip command. only used
+    if the netifaces isn't in the python std lib
     """
     # get the hostname via socket module
     hostname = socket.gethostname()
@@ -184,42 +188,103 @@ def get_net():
                 gateway, dev = data[2], data[4]
     # get ip as socket sees it
     ip = socket.gethostbyname(hostname)
-    print('IP'.ljust(14) + ip)
-    print('Gateway'.ljust(14) + gateway)
-    print('Interface'.ljust(14) + dev)
-    print('Hostname'.ljust(14) + hostname)
+    print('\n[network]')
+    print('IP'.ljust(16) + ip)
+    print('Gateway'.ljust(16) + gateway)
+    print('Interface'.ljust(16) + dev)
+    # = 'Hostname'.ljust(16) + hostname
 
 
-# deprecated since platform deprecated the distro feature
-# will keep for now
-def get_kernel():
+def get_disks():
     """
-    get the kernel via uname cmd
+    gets details about disk usage
     """
-    f = os.popen('uname -r')
-    kernel = f.readline()
-    print('Kernel'.ljust(14) + kernel)
+    # create an empty list for the filesystems
+    fsystems = []
+    with open("/proc/filesystems", "r") as f:
+        for line in f:
+            # we are only interested in lines that dont start with
+            # 'nodev'
+            if not line.startswith("nodev"):
+                # add that to the phys_dev list.
+                fsystems.append(line.strip())
+    # create empty dictionary for partitions
+    partitions = {}
+    with open("/etc/mtab", "r") as f:
+        for line in f:
+            # in some cases there will be a none in there, we dont
+            # want it
+            if line.startswith('none'):
+                continue
+            fields = line.split()
+            device = fields[0]
+            mountpoint = fields[1]
+            fstype = fields[2]
+            # we only want stuff like ext4, xfs, ...etc
+            if fstype not in fsystems:
+                continue
+            # append the partitions dict with the device as the key and
+            # the mountpoint and fstype as its values. we dont really
+            # us fstype, but it may come in handy
+            # EXAMPLE: '/dev/sdb': ['/home/rxlx/Mstor', 'ext4']
+            partitions[device] = [mountpoint, fstype]
+    # sometimes the partition names get very long, check its len
+    pad = max(len(e) for e in partitions.keys()) + 1
+    # we want to keep our default 16 pad at the min
+    if pad < 16:
+        pad = 16
+    print('\n[disks]')
+    # create/print a header
+    print("name".ljust(pad) + "total".ljust(8) + "used".ljust(8)
+          + "%".ljust(6))
+    for part in partitions.keys():
+        # we dont care about boot devices
+        if 'boot' in partitions[part][0]:
+            continue
+        # this is how we determine disk util, do a statvfs on the
+        # mountpoint
+        fs_data = os.statvfs(partitions[part][0])
+        # some basic math, note 1024 ** 3 turns bytes into GB
+        free = round((fs_data.f_bavail * fs_data.f_frsize) / (1024 ** 3), 2)
+        total = round((fs_data.f_blocks * fs_data.f_frsize) / (1024 ** 3), 2)
+        used = round((fs_data.f_blocks - fs_data.f_bfree)
+                     * fs_data.f_frsize / (1024 ** 3), 2)
+        try:
+            percent = round((used / total) * 100, 2)
+        except ZeroDivisionError:
+            # we dont want to destroy the universe, catch the zero div
+            percent = 0
+        # print all the data, minue the first '/dev/' as thats redundant
+        print(part[5:].ljust(pad) + str(total).ljust(8) + str(used).ljust(8) +
+              str(percent).ljust(6))
 
 
 def main():
     """
-    this is it, what we've all been waiting for
+    we finally made it.
     """
-    print('\n')
     # determine verbisity level from get_args
     verbose = get_args()
+    # use the hostname as a title and center it in '-'
+    print('\n' + socket.gethostname().center(80, '-'))
     if verbose:
         get_model()
     # leaving this commented in case someone
     # wants it on by defualt
     # #get_model()
+    print('\n[system]')
     get_dist()
     get_uptime()
     get_cpu()
     get_mem()
-    get_net()
-    # #get_kernel()
+    if netifaces:
+        get_net()
+    else:
+        get_net_from_ip()
+    get_disks()
+    print('\n')
 
 
+# if the script is being ran as itself and not imported
 if __name__ == '__main__':
     main()
