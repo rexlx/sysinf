@@ -63,7 +63,7 @@ def get_uptime():
             line = str(i).split()
             uptime = int(float(line[0]))
     # converted here
-    runtime = "{:0>8}".format(str(dt.timedelta(seconds=uptime)))
+    runtime = str(dt.timedelta(seconds=uptime))
     print('Runtime'.ljust(16) + runtime)
 
 
