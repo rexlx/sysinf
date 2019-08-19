@@ -201,6 +201,7 @@ def get_disks():
     """
     # create an empty list for the filesystems
     fsystems = []
+    fsystems.append('auto')
     with open("/proc/filesystems", "r") as f:
         for line in f:
             # we are only interested in lines that dont start with
@@ -210,27 +211,33 @@ def get_disks():
                 fsystems.append(line.strip())
     # create empty dictionary for partitions
     partitions = {}
-    with open("/etc/mtab", "r") as f:
+    with open("/etc/fstab", "r") as f:
         for line in f:
             # in some cases there will be a none in there, we dont
             # want it
             if line.startswith('none'):
                 continue
-            fields = line.split()
-            device = fields[0]
-            mountpoint = fields[1]
-            fstype = fields[2]
-            # we only want stuff like ext4, xfs, ...etc
-            if fstype not in fsystems:
-                continue
-            # append the partitions dict with the device as the key and
-            # the mountpoint and fstype as its values. we dont really
-            # us fstype, but it may come in handy
-            # EXAMPLE: '/dev/sdb': ['/home/rxlx/Mstor', 'ext4']
-            partitions[device] = [mountpoint, fstype]
+            try:
+                fields = line.split()
+                device = fields[0]
+                mountpoint = fields[1]
+                fstype = fields[2]
+                # we only want stuff like ext4, xfs, ...etc
+                if fstype not in fsystems:
+                    continue
+                # append the partitions dict with the device as the
+                # key and the mountpoint and fstype as its values. we
+                # dont really us fstype, but it may come in handy
+                # EXAMPLE: '/dev/sdb': ['/home/rxlx/Mstor', 'ext4']
+                partitions[device] = [mountpoint, fstype]
+            except Exception as e:
+                error = e
     # sometimes the partition names get very long, check its len
-    pad = max(len(e) for e in partitions.keys()) + 1
-    # we want to keep our default 16 pad at the min
+    mounts = []
+    for i in partitions.values():
+        mounts.append(i[0])
+    pad = max(len(e) for e in mounts) + 1
+    # # we want to keep our default 16 pad at the min
     if pad < 16:
         pad = 16
     print('\n[disks]')
@@ -238,25 +245,35 @@ def get_disks():
     print("name".ljust(pad) + "total".ljust(8) + "used".ljust(8)
           + "%".ljust(6))
     for part in partitions.keys():
+        mount = partitions[part][0]
         # we dont care about boot devices
-        if 'boot' in partitions[part][0]:
+        if 'boot' in mount:
             continue
         # this is how we determine disk util, do a statvfs on the
         # mountpoint
-        fs_data = os.statvfs(partitions[part][0])
-        # some basic math, note 1024 ** 3 turns bytes into GB
-        free = round((fs_data.f_bavail * fs_data.f_frsize) / (1024 ** 3), 2)
-        total = round((fs_data.f_blocks * fs_data.f_frsize) / (1024 ** 3), 2)
-        used = round((fs_data.f_blocks - fs_data.f_bfree)
-                     * fs_data.f_frsize / (1024 ** 3), 2)
         try:
-            percent = round((used / total) * 100, 2)
-        except ZeroDivisionError:
-            # we dont want to destroy the universe, catch the zero div
-            percent = 0
-        # print all the data, minue the first '/dev/' as thats redundant
-        print(part[5:].ljust(pad) + str(total).ljust(8) + str(used).ljust(8) +
-              str(percent).ljust(6))
+            fs_data = os.statvfs(mount)
+            # some basic math, note 1024 ** 3 turns bytes into GB
+            free = round((fs_data.f_bavail * fs_data.f_frsize)
+                         / (1024 ** 3), 2)
+            total = round((fs_data.f_blocks * fs_data.f_frsize)
+                          / (1024 ** 3), 2)
+            used = round((fs_data.f_blocks - fs_data.f_bfree)
+                         * fs_data.f_frsize / (1024 ** 3), 2)
+            try:
+                percent = round((used / total) * 100, 2)
+            except ZeroDivisionError:
+                # we dont want to destroy the universe, catch the zero div
+                percent = 0
+            # print(part[5:].ljust(pad) + str(total).ljust(8)
+            #       + str(used).ljust(8) + str(percent).ljust(6))
+        except OSError:
+            free, total, used, percent = [None] * 4
+            # print(part[5:].ljust(pad) + str(total).ljust(8)
+            #       + str(used).ljust(8) + str(percent).ljust(6))
+        finally:
+            print(mount.ljust(pad) + str(total).ljust(8)
+                  + str(used).ljust(8) + str(percent).ljust(6))
 
 
 def main():
