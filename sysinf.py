@@ -240,7 +240,7 @@ def get_disks():
     # # we want to keep our default 16 pad at the min
     if pad < 16:
         pad = 16
-    print('\n[disks]')
+    print('\n[partitions]')
     # create/print a header
     print("name".ljust(pad) + "total".ljust(8) + "used".ljust(8)
           + "%".ljust(6))
