@@ -52,11 +52,11 @@ eno1            192.168.1.68
 virbr0          192.168.122.1
 docker0         172.17.0.1
 
-[disks]
-name                                    total   used    %
-mapper/fedora_localhost--live-root      48.97   22.18   45.29
-mapper/fedora_localhost--live-home      170.09  68.09   40.03
-sda1                                    916.89  468.47  51.09
-nvme0n1p1                               116.87  37.45   32.04
-sdb                                     1832.77 472.06  25.76
+[partitions]
+name            total   used    %
+/               48.97   22.95   46.87
+/home           170.09  64.06   37.66
+/storage        116.87  69.79   59.72
+/Bstor          916.89  503.06  54.87
+/Mstor          1832.77 509.85  27.82                                    1832.77 472.06  25.76
 ```
