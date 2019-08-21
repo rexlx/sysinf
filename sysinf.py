@@ -187,9 +187,25 @@ def get_net_from_ip():
                 # get default gateway and interface
                 gateway, dev = data[2], data[4]
     # get ip as socket sees it
-    ip = socket.gethostbyname(hostname)
+    try:
+        ipaddr = socket.gethostbyname(hostname)
+    # however this doesnt always work on say lab machines
+    except Exception as e:
+        # although we want to avoid opening up subproceses, we're out
+        # of options as far as i know
+        cmd = '/usr/sbin/ip route get ' + gateway
+        # get the route details of the default gateway
+        iproute = os.popen(cmd)
+        for i in iproute:
+            # theres this stupid '\n  cache' string in the output, if
+            # we see it, just continue on like it doesnt exist
+            if 'cache' in i:
+                continue
+            # get the ipaddr
+            data = i.split()
+            ipaddr = data[4]
     print('\n[network]')
-    print('IP'.ljust(16) + ip)
+    print('IP'.ljust(16) + ipaddr)
     print('Gateway'.ljust(16) + gateway)
     print('Interface'.ljust(16) + dev)
     # = 'Hostname'.ljust(16) + hostname
